@@ -1,0 +1,6 @@
+[2026-03-02 14:02:58] [INFO] ========================================
+[2026-03-02 14:02:58] [INFO]   盘后数据更新（新浪 API 主用）
+[2026-03-02 14:02:58] [INFO] ========================================
+[2026-03-02 14:02:58] [INFO] 交易日期：20260302
+[2026-03-02 14:02:58] [INFO] 读取股票池...
+[2026-03-02 14:02:58] [ERROR] 程序执行失败: ENOENT: no such file or directory, open 'C:\Users\Bob\.openclaw\workspace\stock-data\scripts\workflow\stock-pool-from-total-stocks.json'

@@ -1,0 +1,32 @@
+{
+  "filterDate": "2026-03-01T11:40:31.909Z",
+  "rules": {
+    "excludeST": true,
+    "excludeChiNext": true,
+    "excludeStar": true,
+    "excludeBSE": true,
+    "minMarketCap": 100,
+    "minListDays": 180,
+    "minAmount": 10000,
+    "maxPE": 200,
+    "excludeLoss": true
+  },
+  "stats": {
+    "original": 3178,
+    "filtered": 0,
+    "excluded": 3178
+  },
+  "excludedReasons": {
+    "ST": 0,
+    "ChiNext": 0,
+    "Star": 0,
+    "BSE": 0,
+    "SmallCap": 0,
+    "NewStock": 0,
+    "LowLiquidity": 0,
+    "HighPE": 0,
+    "Loss": 0,
+    "Other": 3178
+  },
+  "stockPool": []
+}

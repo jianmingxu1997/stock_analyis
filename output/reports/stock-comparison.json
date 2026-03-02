@@ -1,0 +1,86 @@
+{
+  "002046.SZ": {
+    "name": "国机精工",
+    "code": "002046.SZ",
+    "tradeDate": "20260227",
+    "technical": {
+      "close": 52.57,
+      "changePercent": "10.00",
+      "ma5": "48.01",
+      "ma10": "46.86",
+      "ma20": "46.85",
+      "ma60": "42.63",
+      "maBullish": true,
+      "ma5Above10": true,
+      "ma5Above20": true,
+      "roc5": "16.59",
+      "roc10": "13.99",
+      "roc20": "7.35",
+      "rsi6": "95.65",
+      "volumeRatio": "1.80",
+      "amplitude": "11.26",
+      "bollPosition": "1.30"
+    },
+    "fundamental": {
+      "pe": "N/A (需 Tushare)",
+      "pb": "N/A (需 Tushare)",
+      "ps": "N/A (需 Tushare)",
+      "roe": "N/A (需 Tushare)",
+      "roa": "N/A (需 Tushare)",
+      "grossMargin": "N/A (需 Tushare)",
+      "netMargin": "N/A (需 Tushare)",
+      "revGrowth": "N/A (需 Tushare)",
+      "profitGrowth": "N/A (需 Tushare)",
+      "note": "基本面数据需从 Tushare 获取，已记录待获取列表"
+    },
+    "market": {
+      "totalCap": "N/A (需股本数据)",
+      "floatCap": "N/A (需股本数据)",
+      "avgTurnover20": "N/A (需计算)",
+      "relativeStrength": "N/A (需大盘数据)",
+      "note": "市场面因子需补充股本和大盘数据"
+    }
+  },
+  "002270.SZ": {
+    "name": "华明装备",
+    "code": "002270.SZ",
+    "tradeDate": "20260227",
+    "technical": {
+      "close": 33.6,
+      "changePercent": "-5.17",
+      "ma5": "34.10",
+      "ma10": "33.27",
+      "ma20": "32.01",
+      "ma60": "28.28",
+      "maBullish": true,
+      "ma5Above10": true,
+      "ma5Above20": true,
+      "roc5": "-0.68",
+      "roc10": "12.71",
+      "roc20": "7.07",
+      "rsi6": "39.41",
+      "volumeRatio": "1.15",
+      "amplitude": "5.62",
+      "bollPosition": "0.72"
+    },
+    "fundamental": {
+      "pe": "N/A (需 Tushare)",
+      "pb": "N/A (需 Tushare)",
+      "ps": "N/A (需 Tushare)",
+      "roe": "N/A (需 Tushare)",
+      "roa": "N/A (需 Tushare)",
+      "grossMargin": "N/A (需 Tushare)",
+      "netMargin": "N/A (需 Tushare)",
+      "revGrowth": "N/A (需 Tushare)",
+      "profitGrowth": "N/A (需 Tushare)",
+      "note": "基本面数据需从 Tushare 获取，已记录待获取列表"
+    },
+    "market": {
+      "totalCap": "N/A (需股本数据)",
+      "floatCap": "N/A (需股本数据)",
+      "avgTurnover20": "N/A (需计算)",
+      "relativeStrength": "N/A (需大盘数据)",
+      "note": "市场面因子需补充股本和大盘数据"
+    }
+  }
+}

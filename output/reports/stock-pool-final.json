@@ -1,0 +1,27 @@
+{
+  "filterDate": "2026-03-01T11:48:37.632Z",
+  "rules": {
+    "minMarketCap": 100,
+    "minListDays": 180
+  },
+  "stats": {
+    "initial": 3179,
+    "final": 0,
+    "excluded": 3179
+  },
+  "excludedReasons": {
+    "smallCap": 0,
+    "newList": 0,
+    "other": 3179
+  },
+  "industryDistribution": {},
+  "areaDistribution": {},
+  "marketCapDistribution": {
+    "100-200 亿": 0,
+    "200-500 亿": 0,
+    "500-1000 亿": 0,
+    "1000-2000 亿": 0,
+    "2000 亿+": 0
+  },
+  "stockPool": []
+}

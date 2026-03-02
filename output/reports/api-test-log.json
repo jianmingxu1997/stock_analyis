@@ -1,0 +1,292 @@
+{
+  "testDate": "2026-03-02T03:02:16.227Z",
+  "testStocks": 11,
+  "totalElapsed": "32.96",
+  "stats": {
+    "eastmoney": {
+      "total": 11,
+      "success": 0,
+      "failed": 11,
+      "avgElapsed": 0
+    },
+    "sina": {
+      "total": 11,
+      "success": 11,
+      "failed": 0,
+      "avgElapsed": 19
+    },
+    "both": {
+      "total": 11,
+      "bothSuccess": 0,
+      "eitherSuccess": 11,
+      "bothFailed": 0
+    }
+  },
+  "results": [
+    {
+      "tsCode": "601398.SH",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 146,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 88,
+        "source": "sina",
+        "data": {
+          "name": "��������",
+          "price": 6.95,
+          "open": 6.9,
+          "high": 6.97,
+          "low": 6.85,
+          "close": 6.92,
+          "vol": 6.96,
+          "amount": 206921487
+        }
+      }
+    },
+    {
+      "tsCode": "601288.SH",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 96,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 18,
+        "source": "sina",
+        "data": {
+          "name": "ũҵ����",
+          "price": 6.48,
+          "open": 6.39,
+          "high": 6.49,
+          "low": 6.33,
+          "close": 6.4,
+          "vol": 6.48,
+          "amount": 221935104
+        }
+      }
+    },
+    {
+      "tsCode": "601939.SH",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 97,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 8,
+        "source": "sina",
+        "data": {
+          "name": "��������",
+          "price": 8.71,
+          "open": 8.6,
+          "high": 8.72,
+          "low": 8.52,
+          "close": 8.59,
+          "vol": 8.71,
+          "amount": 61267258
+        }
+      }
+    },
+    {
+      "tsCode": "600519.SH",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 127,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 8,
+        "source": "sina",
+        "data": {
+          "name": "����ę́",
+          "price": 1440.27,
+          "open": 1450,
+          "high": 1457,
+          "low": 1436.66,
+          "close": 1455.02,
+          "vol": 1440.27,
+          "amount": 2093233
+        }
+      }
+    },
+    {
+      "tsCode": "600030.SH",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 15010,
+        "error": "timeout of 15000ms exceeded",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 16,
+        "source": "sina",
+        "data": {
+          "name": "����֤ȯ",
+          "price": 27.09,
+          "open": 27.11,
+          "high": 27.2,
+          "low": 26.86,
+          "close": 27.37,
+          "vol": 27.09,
+          "amount": 79289690
+        }
+      }
+    },
+    {
+      "tsCode": "601857.SH",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 122,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 27,
+        "source": "sina",
+        "data": {
+          "name": "�й�ʯ��",
+          "price": 11.55,
+          "open": 11.8,
+          "high": 11.8,
+          "low": 11.33,
+          "close": 10.86,
+          "vol": 11.55,
+          "amount": 487947290
+        }
+      }
+    },
+    {
+      "tsCode": "000001.SZ",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 189,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 7,
+        "source": "sina",
+        "data": {
+          "name": "ƽ������",
+          "price": 10.87,
+          "open": 10.85,
+          "high": 10.88,
+          "low": 10.77,
+          "close": 10.9,
+          "vol": 10.87,
+          "amount": 54554760
+        }
+      }
+    },
+    {
+      "tsCode": "000002.SZ",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 124,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 7,
+        "source": "sina",
+        "data": {
+          "name": "�� �ƣ�",
+          "price": 4.76,
+          "open": 4.76,
+          "high": 4.82,
+          "low": 4.73,
+          "close": 4.84,
+          "vol": 4.76,
+          "amount": 97656561
+        }
+      }
+    },
+    {
+      "tsCode": "000858.SZ",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 135,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 9,
+        "source": "sina",
+        "data": {
+          "name": "�� �� Һ",
+          "price": 103.16,
+          "open": 103,
+          "high": 104.6,
+          "low": 102.34,
+          "close": 104.05,
+          "vol": 103.16,
+          "amount": 13715265
+        }
+      }
+    },
+    {
+      "tsCode": "300750.SZ",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 224,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 9,
+        "source": "sina",
+        "data": {
+          "name": "����ʱ��",
+          "price": 339.5,
+          "open": 341,
+          "high": 344.9,
+          "low": 336.68,
+          "close": 342.01,
+          "vol": 339.5,
+          "amount": 13279025
+        }
+      }
+    },
+    {
+      "tsCode": "300059.SZ",
+      "eastmoney": {
+        "success": false,
+        "elapsed": 94,
+        "error": "socket hang up",
+        "source": "eastmoney"
+      },
+      "sina": {
+        "success": true,
+        "elapsed": 7,
+        "source": "sina",
+        "data": {
+          "name": "�����Ƹ�",
+          "price": 21.97,
+          "open": 22.26,
+          "high": 22.32,
+          "low": 21.9,
+          "close": 22.52,
+          "vol": 21.97,
+          "amount": 174620961
+        }
+      }
+    }
+  ],
+  "recommendation": "sina-first"
+}

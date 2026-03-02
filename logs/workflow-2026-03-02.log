@@ -1,0 +1,8 @@
+[2026-03-02 14:02:58.679] [INFO] [WORKFLOW] 工作流开始执行 (自动检测日期)
+[2026-03-02 14:02:58.681] [INFO] [STAGE] 
+开始阶段：数据更新
+[2026-03-02 14:02:58.681] [INFO] [RETRY] 尝试 1/3
+[2026-03-02 14:02:58.682] [INFO] [EXEC] 执行：node "C:\Users\Bob\.openclaw\workspace\stock-data\scripts\workflow\update-daily-data.js" 
+[2026-03-02 14:02:58.884] [ERROR] [EXEC] 执行失败：Command failed: node "C:\Users\Bob\.openclaw\workspace\stock-data\scripts\workflow\update-daily-data.js" 
+
+[2026-03-02 14:02:58.885] [WARN] [RETRY] 300秒后重试...

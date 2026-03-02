@@ -1,0 +1,16 @@
+{
+  "filterDate": "2026-03-01T12:22:16.439Z",
+  "rules": {
+    "minMarketCap": 100
+  },
+  "stats": {
+    "initial": 3179,
+    "final": 0,
+    "excluded": 3179
+  },
+  "excludedReasons": {
+    "smallCap": 0,
+    "other": 3179
+  },
+  "stockPool": []
+}

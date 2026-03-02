@@ -1,0 +1,66 @@
+{
+    "workflow": {
+        "name": "股票分析自动化工作流",
+        "version": "1.0",
+        "timezone": "Asia/Shanghai",
+        "schedule": "0 16 * * 1-5"
+    },
+    
+    "paths": {
+        "workspace": "C:/Users/Bob/.openclaw/workspace/stock-data",
+        "scripts": "scripts/workflow",
+        "logs": "logs",
+        "output": "output",
+        "data": "data/merged"
+    },
+    
+    "stages": {
+        "dataUpdate": {
+            "script": "update-daily-data.js",
+            "timeout": 1800000,
+            "retry": 2,
+            "retryDelay": 300000,
+            "critical": true
+        },
+        "screening": {
+            "script": "screen-stocks.js",
+            "timeout": 120000,
+            "retry": 1,
+            "critical": true
+        },
+        "dashboard": {
+            "script": "generate-dashboard.js",
+            "args": ["../output/excel/全股票池分析_行业 Top5.xlsx", "../output/dashboard/小斐智能选股 1.0.html"],
+            "timeout": 120000,
+            "retry": 1,
+            "critical": false
+        },
+        "notification": {
+            "script": "send-notification.js",
+            "timeout": 30000,
+            "retry": 3,
+            "critical": false
+        }
+    },
+    
+    "notification": {
+        "enabled": true,
+        "platform": "feishu",
+        "sendOnSuccess": true,
+        "sendOnFailure": true,
+        "includeStats": true
+    },
+    
+    "logging": {
+        "level": "info",
+        "file": "workflow-{date}.log",
+        "maxAge": 90,
+        "jsonReport": true
+    },
+    
+    "errorHandling": {
+        "continueOnError": false,
+        "maxRetries": 3,
+        "retryDelay": 300000
+    }
+}

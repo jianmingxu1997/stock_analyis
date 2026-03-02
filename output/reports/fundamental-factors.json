@@ -1,0 +1,25 @@
+{
+  "002046.SZ": {
+    "name": "国机精工",
+    "code": "002046.SZ",
+    "stockBasic": {
+      "tsCode": "002046.SZ",
+      "name": "国机精工",
+      "industry": "机械基件",
+      "listDate": "20050526"
+    },
+    "dailyBasic": null,
+    "finance": null,
+    "growth": null,
+    "capitalFlow": null
+  },
+  "002270.SZ": {
+    "name": "华明装备",
+    "code": "002270.SZ",
+    "stockBasic": null,
+    "dailyBasic": null,
+    "finance": null,
+    "growth": null,
+    "capitalFlow": null
+  }
+}
