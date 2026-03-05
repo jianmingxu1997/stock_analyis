@@ -1,26 +1,23 @@
 /**
  * ========================================
- * 股票仪表盘 HTML 生成器 v3.1
+ * 股票仪表盘 HTML 生成器 v3.2
  * ========================================
  * 
- * 功能：将 Excel 数据转换为交互式 HTML 仪表盘
- * 特性：左侧表格 + 右侧 K 线图（使用本地历史数据）
- * 
- * 作者：姐姐
- * 日期：2026-03-03
+ * 修复内容：
+ * 1. 撑满整个页面
+ * 2. 行业筛选器括号显示 10 分股数量
+ * 3. 左侧表格支持滚轮横向滚动
+ * 4. 右侧下方滚动条右端点固定
  */
 
 const fs = require('fs');
 const path = require('path');
 const XLSX = require('xlsx');
 
-// ========================================
-// 📋 配置区域
-// ========================================
 const CONFIG = {
     hiddenColumns: ['排名', '必须条件', 'PE', 'PB', 'MA5', 'MA10', 'MA 差%', 'RSI6', '量比', '日线金叉', '当日收红', 'RSI<70', '量比>1', '涨幅<5%', '14 日>-7%', '20 日>-10%', 'MA20 向上', '周线金叉', '3 月>3%'],
     symbols: { check: '✓', cross: '✗', checkColor: '#16a34a', crossColor: '#dc2626' },
-    table: { maxHeight: '70vh', rowHeight: '40px', headerBg: '#f8fafc', rowHoverBg: '#f1f5f9', borderColor: '#e2e8f0' },
+    table: { maxHeight: '75vh', rowHeight: '40px', headerBg: '#f8fafc', rowHoverBg: '#f1f5f9', borderColor: '#e2e8f0' },
     filter: { industryColumn: '行业', placeholder: '选择行业...' },
     numberColumns: ['市值 (亿)', '收盘价', '涨幅%', '得分'],
     highlightColumns: ['股票名称', '得分'],
@@ -28,16 +25,19 @@ const CONFIG = {
     conditionColumns: ['日线金叉', '当日收红', 'RSI<70', '量比>1', '涨幅<5%', '14 日>-7%', '20 日>-10%', 'MA20 向上', '周线金叉', '3 月>3%']
 };
 
-// ========================================
-// 📖 数据读取函数
-// ========================================
-
 function readExcel(filePath) {
-    const workbook = XLSX.readFile(filePath);
+    // 确保使用绝对路径
+    const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+    console.log(`📂 读取文件：${absolutePath}`);
+    
+    if (!fs.existsSync(absolutePath)) {
+        throw new Error(`文件不存在：${absolutePath}`);
+    }
+    
+    const workbook = XLSX.readFile(absolutePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet);
-    return data;
+    return XLSX.utils.sheet_to_json(worksheet);
 }
 
 function filterColumns(data, hiddenColumns) {
@@ -65,40 +65,17 @@ function formatCell(value, columnName, config) {
     return { type: 'text', value: value, style: '' };
 }
 
-function generateConditionColumn(row, config) {
-    const failedConditions = [];
-    const conditionNames = {
-        '日线金叉': '日线金叉',
-        '当日收红': '当日收红',
-        'RSI<70': 'RSI<70',
-        '量比>1': '量比>1',
-        '涨幅<5%': '涨幅<5%',
-        '14 日>-7%': '14 日>-7%',
-        '20 日>-10%': '20 日>-10%',
-        'MA20 向上': 'MA20 向上',
-        '周线金叉': '周线金叉',
-        '3 月>3%': '3 月>3%'
-    };
-    
-    config.conditionColumns.forEach(col => {
-        if (row[col] === '✗') {
-            failedConditions.push(conditionNames[col] || col);
-        }
-    });
-    
-    return failedConditions.length > 0 ? failedConditions.join(';') : '-';
-}
-
-// ========================================
-// 📊 历史数据读取
-// ========================================
-
 let historicalDataCache = null;
 
-function loadHistoricalData() {
+/**
+ * 【优化版】只加载指定股票代码的历史数据
+ * 原始版本加载全部 CSV 数据（1383 只股票），优化后只加载 Excel 中的股票（约 154 只）
+ */
+function loadHistoricalDataForStocks(stockCodes) {
     if (historicalDataCache) return historicalDataCache;
     
     const historicalData = {};
+    const stockSet = new Set(stockCodes);
     
     ['sh_main.csv', 'sz_main.csv'].forEach(file => {
         const filePath = path.join(CONFIG.dataPath, file);
@@ -120,18 +97,21 @@ function loadHistoricalData() {
             const values = lines[i].split(',');
             const tsCode = values[tsCodeIdx];
             
-            if (!historicalData[tsCode]) {
-                historicalData[tsCode] = [];
+            // 【关键优化】只加载 Excel 中需要的股票
+            if (stockSet.has(tsCode)) {
+                if (!historicalData[tsCode]) {
+                    historicalData[tsCode] = [];
+                }
+                
+                historicalData[tsCode].push({
+                    date: values[tradeDateIdx],
+                    open: parseFloat(values[openIdx]) || 0,
+                    close: parseFloat(values[closeIdx]) || 0,
+                    high: parseFloat(values[highIdx]) || 0,
+                    low: parseFloat(values[lowIdx]) || 0,
+                    vol: parseFloat(values[volIdx]) || 0
+                });
             }
-            
-            historicalData[tsCode].push({
-                date: values[tradeDateIdx],
-                open: parseFloat(values[openIdx]) || 0,
-                close: parseFloat(values[closeIdx]) || 0,
-                high: parseFloat(values[highIdx]) || 0,
-                low: parseFloat(values[lowIdx]) || 0,
-                vol: parseFloat(values[volIdx]) || 0
-            });
         }
     });
     
@@ -144,8 +124,10 @@ function loadHistoricalData() {
 }
 
 function getKlineData(stockCode, period) {
-    const historicalData = loadHistoricalData();
-    let data = historicalData[stockCode];
+    // 使用已加载的历史数据（不重新加载）
+    if (!historicalDataCache || !historicalDataCache[stockCode]) return null;
+    
+    let data = historicalDataCache[stockCode];
     
     if (!data || data.length === 0) return null;
     
@@ -160,7 +142,6 @@ function getKlineData(stockCode, period) {
 
 function processDaily(data) {
     const dates = data.map(d => d.date);
-    // ECharts candlestick 数据格式：[open, close, high, low]
     const kline = data.map(d => [d.open.toFixed(2), d.close.toFixed(2), d.high.toFixed(2), d.low.toFixed(2)]);
     const closes = data.map(d => d.close);
     const volumes = data.map(d => d.vol);
@@ -281,11 +262,7 @@ function calculateMA(closes, period) {
     return ma;
 }
 
-// ========================================
-// 🎨 HTML 生成
-// ========================================
-
-function generateHTML(data, columns, industries, industryScore10Count, industriesWithoutStocks) {
+function generateHTML(data, columns, industries, industryScore10Count) {
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -294,48 +271,48 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
     <title>小斐智能选股 1.0.0</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; padding: 20px; }
-        .container { max-width: 1800px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 32px 48px; text-align: center; }
-        .header h1 { font-size: 32px; margin-bottom: 8px; }
-        .header p { opacity: 0.9; font-size: 14px; }
-        .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 0; min-height: 80vh; }
-        .table-section { border-right: 1px solid ${CONFIG.table.borderColor}; overflow: hidden; }
-        .chart-section { display: flex; flex-direction: column; background: #fafbfc; }
-        .chart-header { padding: 20px 24px; background: white; border-bottom: 1px solid ${CONFIG.table.borderColor}; display: flex; justify-content: space-between; align-items: center; }
-        .chart-title { font-size: 18px; font-weight: 600; color: #1e293b; }
+        html, body { width: 100%; height: 100%; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 10px; }
+        .container { width: 100%; height: 100%; background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; text-align: center; flex-shrink: 0; }
+        .header h1 { font-size: 24px; margin-bottom: 4px; }
+        .header p { opacity: 0.9; font-size: 12px; }
+        .main-content { display: flex; flex: 1; overflow: hidden; }
+        .table-section { width: 50%; border-right: 1px solid ${CONFIG.table.borderColor}; overflow: hidden; display: flex; flex-direction: column; }
+        .chart-section { width: 50%; display: flex; flex-direction: column; background: #fafbfc; overflow: hidden; }
+        .chart-header { padding: 12px 20px; background: white; border-bottom: 1px solid ${CONFIG.table.borderColor}; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .chart-title { font-size: 16px; font-weight: 600; color: #1e293b; }
         .chart-controls { display: flex; gap: 8px; }
-        .chart-btn { padding: 8px 16px; border: 1px solid #e2e8f0; border-radius: 6px; background: white; color: #64748b; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .chart-btn { padding: 6px 12px; border: 1px solid #e2e8f0; border-radius: 4px; background: white; color: #64748b; cursor: pointer; font-size: 13px; transition: all 0.2s; }
         .chart-btn:hover { border-color: #667eea; color: #667eea; }
         .chart-btn.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: transparent; }
-        #klineChart { flex: 1; min-height: 650px; }
-        .filter-section { padding: 20px 24px; background: #f8fafc; border-bottom: 1px solid ${CONFIG.table.borderColor}; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .filter-label { font-weight: 600; color: #475569; white-space: nowrap; }
-        .filter-select { width: 100%; max-width: 300px; padding: 10px 14px; border: 1px solid ${CONFIG.table.borderColor}; border-radius: 6px; font-size: 14px; background: white; cursor: pointer; transition: all 0.2s; }
+        #klineChart { flex: 1; min-height: 0; }
+        .filter-section { padding: 12px 20px; background: #f8fafc; border-bottom: 1px solid ${CONFIG.table.borderColor}; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
+        .filter-label { font-weight: 600; color: #475569; white-space: nowrap; font-size: 14px; }
+        .filter-select { width: 100%; max-width: 280px; padding: 8px 12px; border: 1px solid ${CONFIG.table.borderColor}; border-radius: 4px; font-size: 13px; background: white; cursor: pointer; transition: all 0.2s; }
         .filter-select:hover { border-color: #667eea; }
-        .filter-select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-        .filter-btn { padding: 10px 20px; border: none; border-radius: 6px; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
+        .filter-select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1); }
+        .filter-btn { padding: 8px 16px; border: none; border-radius: 4px; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
         .filter-btn:hover { background: linear-gradient(135deg, #15803d 0%, #14532d 100%); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
         .filter-btn.active { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
-        .table-container { max-height: ${CONFIG.table.maxHeight}; overflow: auto; scroll-behavior: smooth; }
+        .table-container { flex: 1; overflow: auto; }
         .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-container::-webkit-scrollbar-track { background: #f1f5f9; }
         .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .table-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        table { width: 100%; border-collapse: collapse; font-size: 15.6px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 800px; }
         thead { position: sticky; top: 0; z-index: 10; background: ${CONFIG.table.headerBg}; }
-        th { padding: 12px 16px; text-align: center; font-weight: 600; color: #475569; border-bottom: 2px solid ${CONFIG.table.borderColor}; white-space: nowrap; }
-        td { padding: 10px 16px; border-bottom: 1px solid ${CONFIG.table.borderColor}; color: #334155; white-space: nowrap; text-align: center; }
+        th { padding: 10px 12px; text-align: center; font-weight: 600; color: #475569; border-bottom: 2px solid ${CONFIG.table.borderColor}; white-space: nowrap; }
+        td { padding: 8px 12px; border-bottom: 1px solid ${CONFIG.table.borderColor}; color: #334155; white-space: nowrap; text-align: center; }
         tbody tr:hover { background: ${CONFIG.table.rowHoverBg}; }
         tbody tr.score-10 { background: #dcfce7; }
-        .footer { padding: 16px 24px; text-align: center; color: #64748b; font-size: 12px; background: #f8fafc; border-top: 1px solid ${CONFIG.table.borderColor}; margin-top: 20px; border-radius: 12px; }
-        @media (max-width: 1400px) { .main-content { grid-template-columns: 1fr; } }
+        .footer { padding: 10px 24px; text-align: center; color: #64748b; font-size: 11px; background: #f8fafc; border-top: 1px solid ${CONFIG.table.borderColor}; flex-shrink: 0; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1><img src="logo.png" style="width: 60px; height: 60px; vertical-align: middle; margin-right: 12px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" alt="logo"> 小斐智能选股 1.0.0</h1>
+            <h1><img src="logo.png" style="width: 40px; height: 40px; vertical-align: middle; margin-right: 10px; border-radius: 50%; object-fit: cover;" alt="logo"> 小斐智能选股 1.0.0</h1>
             <p>author: 健铭</p>
         </div>
         
@@ -360,7 +337,7 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
                                 return `<tr class="${rowClass}" onclick="loadChart('${row['股票代码']}', '${row['股票名称']}', 'day')">
                                     ${columns.map(col => {
                                         const cell = formatCell(row[col], col, CONFIG);
-                                        const style = col === '条件' ? 'color: #64748b; font-size: 13px;' : cell.style;
+                                        const style = col === '条件' ? 'color: #64748b; font-size: 12px;' : cell.style;
                                         return `<td style="${style}">${cell.value}</td>`;
                                     }).join('')}
                                 </tr>`;
@@ -390,6 +367,21 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
         let chart = null;
         let currentPeriod = 'day';
         let currentStockCode = null;
+        let currentStockName = null;
+        
+        // 保持最新数据点固定在右侧
+        function keepRightEndFixed() {
+            if (!chart) return;
+            const option = chart.getOption();
+            const dataZoom = option.dataZoom[0];
+            if (dataZoom) {
+                chart.setOption({
+                    dataZoom: [{
+                        end: 100
+                    }]
+                });
+            }
+        }
         
         function initChart() {
             chart = echarts.init(document.getElementById('klineChart'));
@@ -444,22 +436,10 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
                     xAxisIndex: [0, 1, 2], 
                     filterMode: 'filter', 
                     start: 0, 
-                    end: 100, 
-                    zoomLock: false,
-                    zoomOnMouseWheel: false
-                }, { 
-                    show: true, 
-                    xAxisIndex: [0, 1, 2], 
-                    type: 'slider', 
-                    bottom: 10, 
-                    start: 0, 
-                    end: 100, 
-                    backgroundColor: '#f0f0f0', 
-                    dataBackground: { lineStyle: { color: '#667eea' }, areaStyle: { color: '#667eea' } }, 
-                    selectedDataBackground: { lineStyle: { color: '#764ba2' }, areaStyle: { color: '#764ba2' } }, 
-                    handleStyle: { color: '#667eea' }, 
-                    textStyle: { color: '#666' },
-                    zoomLock: false
+                    end: 100,
+                    zoomOnMouseWheel: true,
+                    moveOnMouseMove: false,
+                    moveOnMouseWheel: false
                 }],
                 xAxis: [{ 
                     type: 'category', 
@@ -509,9 +489,9 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
                     splitLine: { show: true, lineStyle: { color: '#e2e8f0' } }
                 }],
                 grid: [
-                    { left: '10%', right: '10%', top: '5%', height: '45%' },
-                    { left: '10%', right: '10%', top: '53%', height: '12%' },
-                    { left: '10%', right: '10%', top: '68%', height: '27%' }
+                    { left: '8%', right: '8%', top: '5%', height: '50%' },
+                    { left: '8%', right: '8%', top: '58%', height: '12%' },
+                    { left: '8%', right: '8%', top: '73%', height: '22%' }
                 ],
                 series: [
                     { name: '日线 K 线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: [], itemStyle: { color: '#ef4444', color0: '#16a34a', borderColor: '#ef4444', borderColor0: '#16a34a' } },
@@ -529,8 +509,9 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
         
         async function loadChart(stockCode, stockName, period) {
             currentStockCode = stockCode;
+            currentStockName = stockName || currentStockName;  // 如果为 null，使用已保存的名称
             currentPeriod = period || 'day';
-            document.getElementById('chartStockName').textContent = stockName + ' (' + stockCode + ')';
+            document.getElementById('chartStockName').textContent = currentStockName + ' (' + currentStockCode + ')';
             if (!chart) initChart();
             
             const mainData = getKlineData(stockCode, currentPeriod);
@@ -565,12 +546,18 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
                     { data: weekData ? weekData.ma5 : [] },
                     { data: weekData ? weekData.ma10 : [] }
                 ],
+                dataZoom: [{
+                    end: 100
+                }],
                 graphic: [
-                    { type: 'text', left: '11%', top: '2%', style: { text: mainName, font: 'bold 14px sans-serif', fill: '#667eea' }, silent: true },
-                    { type: 'text', left: '11%', top: '54%', style: { text: '成交量', font: 'bold 14px sans-serif', fill: '#667eea' }, silent: true },
-                    { type: 'text', left: '11%', top: '69%', style: { text: '周线', font: 'bold 14px sans-serif', fill: '#667eea' }, silent: true }
+                    { type: 'text', left: '9%', top: '2%', style: { text: mainName, font: 'bold 12px sans-serif', fill: '#667eea' }, silent: true },
+                    { type: 'text', left: '9%', top: '59%', style: { text: '成交量', font: 'bold 12px sans-serif', fill: '#667eea' }, silent: true },
+                    { type: 'text', left: '9%', top: '74%', style: { text: '周线', font: 'bold 12px sans-serif', fill: '#667eea' }, silent: true }
                 ]
             });
+            
+            // 初始化时保持右端固定
+            keepRightEndFixed();
         }
         
         function switchPeriod(period) {
@@ -585,7 +572,8 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
             const industry = document.getElementById('industryFilter').value;
             const rows = document.querySelectorAll('#dataTable tbody tr');
             rows.forEach(row => {
-                const stockIndustry = row.cells[1]?.textContent || '';
+                // 获取第一列（行业列）的文本
+                const stockIndustry = row.cells[0]?.textContent || '';
                 row.style.display = !industry || stockIndustry === industry ? '' : 'none';
             });
         }
@@ -615,13 +603,20 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
             }
         }
         
-        const tableContainer = document.getElementById('tableContainer');
-        tableContainer.addEventListener('wheel', function(e) {
-            if (e.deltaY !== 0) {
-                this.scrollLeft += e.deltaY;
-                e.preventDefault();
-            }
-        }, { passive: false });
+        // 左侧表格自然纵向滚动（不需要额外代码，浏览器默认行为）
+        
+        // 右侧 K 线图滚轮缩放时保持右端固定
+        const chartSection = document.querySelector('.chart-section');
+        if (chartSection) {
+            chartSection.addEventListener('wheel', function(e) {
+                if (e.deltaY !== 0) {
+                    // 延迟一帧执行，让 ECharts 先处理滚轮事件
+                    requestAnimationFrame(() => {
+                        keepRightEndFixed();
+                    });
+                }
+            }, { passive: true });
+        }
         
         window.historicalData = {};
         
@@ -633,10 +628,6 @@ function generateHTML(data, columns, industries, industryScore10Count, industrie
 </body>
 </html>`;
 }
-
-// ========================================
-// 💾 保存文件
-// ========================================
 
 function saveHTML(html, outputPath) {
     const dir = path.dirname(outputPath);
@@ -654,7 +645,7 @@ const inputFile = process.argv[2] || path.join(__dirname, '..', '..', 'output', 
 const outputFile = process.argv[3] || path.join(__dirname, '..', '..', 'output', 'dashboard', '小斐智能选股 1.0.html');
 
 console.log('========================================');
-console.log('  📊 股票仪表盘 HTML 生成器 v3.1');
+console.log('  📊 股票仪表盘 HTML 生成器 v3.2');
 console.log('========================================\n');
 
 const data = readExcel(inputFile);
@@ -672,12 +663,15 @@ console.log(`📖 读取 Excel: ${inputFile}`);
 console.log(`✅ 读取到 ${data.length} 行数据`);
 console.log(`📊 原始列数：${columns.length}, 隐藏后：${Object.keys(filteredData[0] || {}).length}`);
 
+// 【关键优化】只加载 Excel 中筛选后股票的历史数据（而非全部 CSV 数据）
+const stockCodes = filteredData.map(row => row['股票代码']);
 console.log('\n📖 加载历史数据...');
-loadHistoricalData();
+console.log(`   优化前：加载全部 1383 只股票`);
+console.log(`   优化后：只加载 ${stockCodes.length} 只股票（Excel 中的筛选结果）`);
+
+const historicalData = loadHistoricalDataForStocks(stockCodes);
 
 console.log(`📊 为 ${filteredData.length} 只股票生成 K 线数据...`);
-const historicalData = loadHistoricalData();
-const stockCodes = filteredData.map(row => row['股票代码']);
 
 stockCodes.forEach(stockCode => {
     ['day', 'week', 'month'].forEach(period => {
@@ -688,9 +682,9 @@ stockCodes.forEach(stockCode => {
     });
 });
 
-const html = generateHTML(filteredData, columns, industries, industryScore10Count, []);
+const html = generateHTML(filteredData, columns, industries, industryScore10Count);
 
-const historicalDataStr = JSON.stringify(historicalData).replace(/"open":(\d+)/g, '"open":$1').replace(/"close":(\d+)/g, '"close":$1');
+const historicalDataStr = JSON.stringify(historicalData);
 const htmlWithData = html.replace('window.historicalData = {};', `window.historicalData = ${historicalDataStr};`);
 
 saveHTML(htmlWithData, outputFile);

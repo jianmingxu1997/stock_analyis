@@ -1,0 +1,21 @@
+# Token 缓存文件（敏感信息）
+config/.feishu-*.json
+config/.github-*.json
+config/google-drive-config.json
+
+# 日志文件
+logs/*.log
+logs/*.json
+
+# 临时脚本和测试文件
+*.js
+!scripts/**/*.js
+
+# 临时文件
+*.bak
+*.tmp
+*.temp
+
+# 系统文件
+.DS_Store
+Thumbs.db

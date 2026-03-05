@@ -40,7 +40,8 @@ function log(message, level = 'INFO', module = 'WORKFLOW') {
 // 执行脚本
 async function executeScript(scriptName, args = [], timeout = 300000) {
     const scriptPath = path.join(SCRIPTS_DIR, scriptName);
-    const argsStr = args.join(' ');
+    // 对包含空格的参数添加引号
+    const argsStr = args.map(arg => arg.includes(' ') ? `"${arg}"` : arg).join(' ');
     const command = `node "${scriptPath}" ${argsStr}`;
     
     log(`执行：${command}`, 'INFO', 'EXEC');
@@ -113,10 +114,22 @@ const stages = [
     {
         name: '仪表盘生成',
         script: 'generate-dashboard.js',
-        args: ['../output/excel/全股票池分析_行业 Top5.xlsx', '../output/dashboard/小斐智能选股 1.0.html'],
-        timeout: 120000,
+        args: [
+            path.join(OUTPUT_DIR, 'excel', '全股票池分析_行业 Top5.xlsx'),
+            path.join(OUTPUT_DIR, 'dashboard', '小斐智能选股 1.0.html')
+        ],
+        timeout: 300000,  // 5 分钟
         retry: 1,
         retryDelay: 60000,
+        critical: false
+    },
+    {
+        name: '上传到 GitHub',
+        script: 'upload-to-github.js',
+        args: [],
+        timeout: 120000,  // 2 分钟
+        retry: 2,
+        retryDelay: 30000,
         critical: false
     },
     {
