@@ -21,6 +21,22 @@ const SCRIPTS_DIR = path.join(__dirname);
 const LOGS_DIR = path.join(WORKSPACE, 'logs');
 const OUTPUT_DIR = path.join(WORKSPACE, 'output');
 
+// 获取交易日期（工作日用今天，周末用周五）
+function getTradeDate() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        // 周末，用周五
+        today.setDate(today.getDate() - (dayOfWeek === 0 ? 2 : 1));
+    }
+    
+    return today.toISOString().split('T')[0].replace(/-/g, '');
+}
+
+const TRADE_DATE = getTradeDate();
+const EXCEL_FILE = path.join(OUTPUT_DIR, 'excel', `${TRADE_DATE}_小斐选股_行业 top20.xlsx`);
+
 // 确保日志目录存在
 if (!fs.existsSync(LOGS_DIR)) {
     fs.mkdirSync(LOGS_DIR, { recursive: true });
@@ -97,10 +113,19 @@ const stages = [
         name: '数据更新',
         script: 'update-daily-data.js',
         args: [],
-        timeout: 1800000,  // 30 分钟
+        timeout: 600000,   // 10 分钟
+        retry: 3,
+        retryDelay: 60000,
+        critical: false
+    },
+    {
+        name: 'ETF 数据更新',
+        script: 'update-etf-daily-data.js',
+        args: [],
+        timeout: 300000,   // 5 分钟
         retry: 2,
-        retryDelay: 300000,
-        critical: true
+        retryDelay: 30000,
+        critical: false    // 非关键：ETF 数据更新失败也继续
     },
     {
         name: '股票筛选',
@@ -115,7 +140,7 @@ const stages = [
         name: '仪表盘生成',
         script: 'generate-dashboard.js',
         args: [
-            path.join(OUTPUT_DIR, 'excel', '全股票池分析_行业 Top5.xlsx'),
+            EXCEL_FILE,
             path.join(OUTPUT_DIR, 'dashboard', '小斐智能选股 1.0.html')
         ],
         timeout: 300000,  // 5 分钟
@@ -130,7 +155,7 @@ const stages = [
         timeout: 120000,  // 2 分钟
         retry: 2,
         retryDelay: 30000,
-        critical: false
+        critical: false    // 非关键：上传失败也要发通知
     },
     {
         name: '结果通知',
@@ -188,19 +213,27 @@ async function main() {
                 attempts: result.attempt
             });
         } else {
-            log(`❌ 阶段失败：${stage.name}`, 'ERROR', 'STAGE');
-            results.push({
-                stage: stage.name,
-                success: false,
-                duration: stageDuration,
-                attempts: result.attempts,
-                error: result.error
-            });
-            
             if (stage.critical) {
-                log(`关键阶段失败，终止工作流`, 'ERROR', 'WORKFLOW');
+                log(`❌ 关键阶段失败：${stage.name}，终止工作流`, 'ERROR', 'STAGE');
+                results.push({
+                    stage: stage.name,
+                    success: false,
+                    duration: stageDuration,
+                    attempts: result.attempts,
+                    error: result.error
+                });
                 workflowSuccess = false;
                 break;
+            } else {
+                log(`⚠️  非关键阶段失败：${stage.name}，继续执行后续步骤`, 'WARN', 'STAGE');
+                results.push({
+                    stage: stage.name,
+                    success: false,
+                    duration: stageDuration,
+                    attempts: result.attempts,
+                    error: result.error,
+                    note: '已跳过，继续执行'
+                });
             }
         }
     }

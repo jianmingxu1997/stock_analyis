@@ -209,7 +209,8 @@ function getUpdateStats(tradeDate) {
  * 从 Excel 读取筛选结果统计
  */
 function getScreenStats(tradeDate) {
-    const xlsxFile = path.join(OUTPUT_EXCEL_DIR, `全股票池分析_行业 Top5.xlsx`);
+    // 使用新命名格式：20260309_小斐选股_行业 top20.xlsx
+    const xlsxFile = path.join(OUTPUT_EXCEL_DIR, `${tradeDate}_小斐选股_行业 top20.xlsx`);
     if (!fs.existsSync(xlsxFile)) {
         return null;
     }
@@ -348,7 +349,7 @@ function buildNotificationCard(stats, tradeDate, isTest = false) {
             }
         });
         
-        // 操作按钮
+        // 操作按钮（使用 GitHub 链接，支持手机访问）
         card.elements.push({ tag: 'hr' });
         card.elements.push({
             tag: 'action',
@@ -359,7 +360,7 @@ function buildNotificationCard(stats, tradeDate, isTest = false) {
                         tag: 'plain_text',
                         content: '📊 查看 Excel'
                     },
-                    url: `file://${path.join(OUTPUT_EXCEL_DIR, '全股票池分析_行业 Top5.xlsx')}`,
+                    url: `https://github.com/jianmingxu1997/stock_analyis/blob/main/daily/${tradeDate}/${tradeDate}_小斐选股_行业 top20.xlsx`,
                     type: 'primary'
                 },
                 {
@@ -368,7 +369,7 @@ function buildNotificationCard(stats, tradeDate, isTest = false) {
                         tag: 'plain_text',
                         content: '🌐 打开仪表盘'
                     },
-                    url: `file://${path.join(WORKSPACE, 'output', 'dashboard', '小斐智能选股 1.0.html')}`,
+                    url: `https://github.com/jianmingxu1997/stock_analyis/blob/main/daily/${tradeDate}/小斐智能选股 1.0.html`,
                     type: 'default'
                 }
             ]
@@ -483,5 +484,17 @@ const isTest = process.argv.includes('--test');
 const isForce = process.argv.includes('--force');
 main(isTest, isForce).catch(console.error);
 
-// 导出函数
-module.exports = { sendFeishuMessage, buildNotificationCard, getUpdateStats, getScreenStats, getTenantAccessToken, checkAlreadySent };
+// 导出函数（修复导出名称）
+module.exports = { 
+    sendFeishuMessage, 
+    buildNotificationCard,  // ← 正确名称
+    getUpdateStats, 
+    getScreenStats, 
+    getTenantAccessToken, 
+    checkAlreadySent 
+};
+
+// 如果作为模块被 require，且调用的是 buildCardMessage，提供别名兼容
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.buildCardMessage = buildNotificationCard;  // 别名兼容
+}

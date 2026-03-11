@@ -1,192 +1,157 @@
-# 股票分析自动化系统
+# 📊 小斐股票分析系统
 
-> 自动化工作流：数据更新 → 股票筛选 → 仪表盘生成 → 通知推送
+> 自动化股票筛选 + 交互式仪表盘 + 持仓管理  
+> 最后更新：2026-03-09
+
+---
+
+## 🎯 系统功能
+
+### 股票分析
+- ✅ **每日自动更新** - 周一至周五 16:00 自动执行
+- ✅ **10 指标评分** - 技术面 + 基本面综合评分
+- ✅ **行业 Top20** - 每个行业选前 20 名
+- ✅ **持仓管理** - 7 只强制持仓股票自动跟踪
+- ✅ **交互式仪表盘** - 筛选、搜索、K 线图
+- ✅ **飞书通知** - 结果自动推送
+- ✅ **GitHub 同步** - 数据自动备份
+
+### ETF 数据（新增）
+- ✅ **317 只主流 ETF** - 宽基、科技、医药、消费等
+- ✅ **历史数据** - 2025-01-01 至今，83,261 条记录
+- ✅ **智能过滤** - 去重、去券商名、保留纯净 ETF
+- 🔄 **仪表盘整合** - 计划中
 
 ---
 
 ## 📁 目录结构
 
 ```
-stock-data/
-├── scripts/                # 脚本文件
-│   ├── workflow/          # 核心工作流脚本
-│   │   ├── run-full-workflow.js    # 完整工作流编排
-│   │   ├── update-daily-data.js    # 盘后数据更新
-│   │   ├── screen-stocks.js        # 股票筛选
-│   │   ├── generate-dashboard.js   # 仪表盘生成
-│   │   └── send-notification.js    # 通知发送
-│   ├── utils/             # 工具脚本
-│   │   └── embed-logo.js           # Logo 嵌入
-│   └── archive/           # 历史/测试脚本（归档）
-│
-├── data/                  # 数据文件
-│   ├── merged/           # 合并的历史数据
-│   ├── daily/            # 单日数据
-│   └── factors/          # 因子数据
-│
-├── output/                # 输出文件
-│   ├── excel/            # Excel 筛选结果
-│   ├── dashboard/        # HTML 仪表盘
-│   └── reports/          # JSON 报告
-│
-├── logs/                  # 日志文件
-├── config/                # 配置文件
-└── docs/                  # 文档
+projects/project_stock/
+├── 📁 scripts/workflow/      # 工作流脚本
+│   ├── run-full-workflow.js      # 完整工作流编排
+│   ├── update-daily-data.js      # 数据更新
+│   ├── screen-stocks.js          # 股票筛选 + 持仓添加
+│   ├── generate-dashboard.js     # 仪表盘生成
+│   ├── send-notification.js      # 飞书通知
+│   └── upload-to-github.js       # GitHub 上传
+├── 📁 output/
+│   ├── 📁 excel/             # Excel 输出
+│   └── 📁 dashboard/         # HTML 仪表盘
+├── 📁 data/
+│   ├── 📁 merged/            # 合并的历史数据
+│   └── 📁 pools/             # 股票池配置
+├── 📁 config/
+│   └── feishu-config.json        # 飞书配置
+├── 📁 docs/
+│   └── 工作流说明.md              # 详细文档
+└── README.md                     # 本文件
 ```
 
 ---
 
 ## 🚀 快速开始
 
-### 方式一：运行完整工作流（推荐）
+### 手动执行完整工作流
 
 ```bash
-cd C:\Users\Bob\.openclaw\workspace\stock-data
-
-# 自动检测日期
+cd projects/project_stock
 node scripts/workflow/run-full-workflow.js
-
-# 或指定日期
-node scripts/workflow/run-full-workflow.js 20260302
 ```
 
-### 方式二：分步执行
+### 单独执行步骤
 
 ```bash
-# 1. 更新数据
+# 1. 数据更新
 node scripts/workflow/update-daily-data.js
 
-# 2. 筛选股票
+# 2. 股票筛选
 node scripts/workflow/screen-stocks.js
 
 # 3. 生成仪表盘
-node scripts/workflow/generate-dashboard.js ../output/excel/全股票池分析_行业 Top5.xlsx ../output/dashboard/小斐智能选股 1.0.html
+node scripts/workflow/generate-dashboard.js
 
 # 4. 发送通知
 node scripts/workflow/send-notification.js
+
+# 5. 上传 GitHub
+node scripts/workflow/upload-to-github.js
 ```
 
 ---
 
-## ⏰ 定时任务配置
+## 📊 持仓股票列表
 
-### Windows 任务计划程序
+| 代码 | 名称 | 行业 |
+|------|------|------|
+| 601600.SH | 中国铝业 | 铝 |
+| 600392.SH | 盛和资源 | 小金属 |
+| 603993.SH | 洛阳钼业 | 小金属 |
+| 000969.SZ | 安泰科技 | 小金属 |
+| 002046.SZ | 国机精工 | 机械基件 |
+| 002270.SZ | 华明装备 | 电气设备 |
+| 601611.SH | 中国核建 | 建筑工程 |
 
-```powershell
-# 以管理员身份运行 PowerShell
-cd C:\Users\Bob\.openclaw\workspace\stock-data
+**说明：** 持仓股票强制加入 Excel，不参与行业 Top20 筛选。
 
-# 创建工作流定时任务（工作日 16:00）
-$action = New-ScheduledTaskAction -Execute "node" `
-    -Argument "scripts/workflow/run-full-workflow.js" `
-    -WorkingDirectory "C:\Users\Bob\.openclaw\workspace\stock-data"
+---
 
-$trigger = New-ScheduledTaskTrigger -Weekly `
-    -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday `
-    -At 4pm
+## 🎨 仪表盘功能
 
-Register-ScheduledTask `
-    -TaskName "StockAnalysisWorkflow" `
-    -TaskPath "\Stock\" `
-    -Action $action `
-    -Trigger $trigger `
-    -RunLevel Highest `
-    -Force
+### 筛选功能
+
+- **💼 只看持仓** - 只显示 7 只持仓股票
+- **⭐ 只看 9-10 分** - 只显示高分股票
+- **🏭 行业筛选** - 按行业过滤
+- **🔍 搜索框** - 搜索股票名称/代码
+
+### K 线图
+
+- 点击股票加载 K 线图
+- 支持日线/月线切换
+- 显示 MA5、MA10、成交量
+
+---
+
+## ⏰ 定时任务
+
+### Cron 配置
+
+```cron
+# 周一至周五 16:00
+0 16 * * 1-5
 ```
 
----
-
-## 📊 输出文件
-
-### Excel 筛选结果
-- **位置**: `output/excel/全股票池分析_行业 Top5.xlsx`
-- **内容**: 180-220 只高分股票（8 分以上）
-
-### HTML 仪表盘
-- **位置**: `output/dashboard/小斐智能选股 1.0.html`
-- **大小**: 约 9MB（含 Base64 Logo）
-- **功能**: 交互式股票筛选 + K 线图
-
-### 执行报告
-- **位置**: `logs/report-YYYYMMDD.json`
-- **内容**: 各阶段执行结果、耗时、错误信息
-
----
-
-## 📝 日志查看
+### 查看定时任务
 
 ```bash
-# 查看今日日志
-Get-Content logs\workflow-2026-03-02.log -Tail 50
-
-# 查看最新报告
-cat logs\report-20260302.json
+openclaw cron list
 ```
 
----
+### 手动触发
 
-## 🔧 配置说明
-
-### workflow-config.json
-
-```json
-{
-    "workflow": {
-        "schedule": "0 16 * * 1-5"  // 工作日 16:00
-    },
-    "stages": {
-        "dataUpdate": {
-            "retry": 2,              // 失败重试 2 次
-            "timeout": 1800000       // 超时 30 分钟
-        }
-    }
-}
-```
-
----
-
-## 📈 监控指标
-
-| 指标 | 目标值 | 告警阈值 |
-|------|--------|----------|
-| 执行成功率 | >99% | <95% |
-| 数据更新成功率 | 100% | <98% |
-| 平均执行时间 | <20 分钟 | >30 分钟 |
-
----
-
-## 🐛 故障排查
-
-### 问题 1: 数据更新失败
 ```bash
-# 检查 API 可用性
-node scripts/archive/test-api.js
-
-# 手动执行
-node scripts/workflow/update-daily-data.js
-
-# 查看日志
-Get-Content logs\update-*.log -Tail 100
-```
-
-### 问题 2: 仪表盘未生成
-```bash
-# 检查 Excel 文件
-ls output/excel/*.xlsx
-
-# 手动生成
-node scripts/workflow/generate-dashboard.js
+openclaw cron run stock-analysis-workflow
 ```
 
 ---
 
-## 📚 相关文档
+## 📝 修改历史
 
-- [自动化工作流设计文档](docs/自动化工作流设计文档.md)
-- [股票仪表盘开发文档](docs/股票仪表盘开发文档.md)
-- [盘后数据采集系统说明](docs/盘后数据采集系统 - 完整说明文档.md)
+### 2026-03-09
+
+- ✅ 持仓股票强制加入 Excel（不参与筛选）
+- ✅ 股票代码带后缀显示（.SH/.SZ）
+- ✅ 筛选按钮互斥逻辑优化
+- ✅ 行业 Top20 确认（原 Top5）
+- ✅ 工作流文档创建
 
 ---
 
-*最后更新：2026-03-02*  
-*作者：小斐姐 🌙*
+## 📖 详细文档
+
+查看 `docs/工作流说明.md` 了解更多细节。
+
+---
+
+*🌙 小斐姐 · 2026*

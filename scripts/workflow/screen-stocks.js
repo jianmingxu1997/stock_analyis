@@ -1,14 +1,31 @@
-// 全股票池分析：10 指标评分 + 行业 Top5
+// 全股票池分析：10 指标评分 + 行业 Top20
 const fs = require('fs');
 const path = require('path');
 const { utils, writeFileXLSX } = require('xlsx');
 
 const STOCK_POOL_FILE = path.join(__dirname, '..', '..', 'data', 'pools', 'stock-pool-from-total-stocks.json');
 const MERGED_DIR = path.join(__dirname, '..', '..', 'data', 'merged');
-const OUTPUT_FILE = path.join(__dirname, '..', '..', 'output', 'excel', '全股票池分析_行业 Top5.xlsx');
+const OUTPUT_DIR = path.join(__dirname, '..', '..', 'output', 'excel');
+
+// 获取最新交易日期（从数据文件自动检测）
+function getTradeDate() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        // 周末，用周五
+        today.setDate(today.getDate() - (dayOfWeek === 0 ? 2 : 1));
+    }
+    
+    return today.toISOString().split('T')[0].replace(/-/g, '');
+}
+
+const TRADE_DATE = getTradeDate();
+const OUTPUT_FILE_TEMP = path.join(OUTPUT_DIR, `${TRADE_DATE}_小斐选股_行业 top20_temp.xlsx`);
+const OUTPUT_FILE = path.join(OUTPUT_DIR, `${TRADE_DATE}_小斐选股_行业 top20.xlsx`);
 
 console.log('========================================');
-console.log('  全股票池分析：10 指标评分 + 行业 Top5');
+console.log('  全股票池分析：10 指标评分 + 行业 Top20');
 console.log('========================================\n');
 
 const startTime = Date.now();
@@ -211,8 +228,8 @@ stockPool.forEach(stock => {
 console.log(`✅ 计算完成：${allStocksData.length}只`);
 console.log(`✅ 满足必须条件：${passedMust}只\n`);
 
-// ========== 按行业分组，选 Top5 ==========
-console.log('📊 按行业分组，选 Top5...\n');
+// ========== 按行业分组，选 Top20 ==========
+console.log('📊 按行业分组，选 Top20...\n');
 
 const byIndustry = {};
 allStocksData.forEach(s => {
@@ -220,29 +237,31 @@ allStocksData.forEach(s => {
     byIndustry[s.industry].push(s);
 });
 
-const industryTop5 = {};
+const industryTop20 = {};
 Object.keys(byIndustry).forEach(ind => {
     const stocks = byIndustry[ind];
-    // 只选满足必须条件的
-    const mustPassStocks = stocks.filter(s => s.mustPass);
-    if (mustPassStocks.length === 0) return;
     
+    // 取消必要条件限制，所有股票都参与排序
     // 按 score 排序
-    mustPassStocks.sort((a, b) => b.score - a.score);
+    stocks.sort((a, b) => b.score - a.score);
     
-    // 取前 5
-    industryTop5[ind] = mustPassStocks.slice(0, 5);
+    // 取前 20
+    industryTop20[ind] = stocks.slice(0, 20);
 });
 
-console.log(`✅ 有股票满足条件的行业：${Object.keys(industryTop5).length}个\n`);
+console.log(`✅ 有股票的行业：${Object.keys(industryTop20).length}个\n`);
 
 // ========== 导出 Excel ==========
 console.log('💾 导出 Excel...\n');
 
+// 持仓股票列表（关系户，强制加入 Excel）
+const HOLDINGS = ['601600', '600392', '603993', '000969', '002046', '002270', '601611'];
+console.log(`💼 持仓股票（强制加入 Excel）: ${HOLDINGS.join(', ')}\n`);
+
 // 准备数据
 const excelData = [];
-Object.keys(industryTop5).sort().forEach(ind => {
-    const stocks = industryTop5[ind];
+Object.keys(industryTop20).sort().forEach(ind => {
+    const stocks = industryTop20[ind];
     stocks.forEach((s, idx) => {
         excelData.push({
             '行业': ind,
@@ -277,6 +296,70 @@ Object.keys(industryTop5).sort().forEach(ind => {
     excelData.push({});
 });
 
+// 强制添加持仓股票到 Excel（不管是否满足筛选条件）
+console.log('💼 添加持仓股票到 Excel...\n');
+const addedHoldings = [];
+HOLDINGS.forEach(code => {
+    // 查找持仓股票数据
+    const holdingStock = allStocksData.find(s => {
+        const stockCode = s.tsCode?.replace('.SZ', '').replace('.SH', '');
+        return stockCode === code;
+    });
+    
+    if (holdingStock) {
+        const stockCode = holdingStock.tsCode;
+        const stockName = holdingStock.name;
+        const industry = holdingStock.industry;
+        
+        // 检查是否已存在
+        const exists = excelData.some(r => {
+            const rCode = r['股票代码']?.replace('.SZ', '').replace('.SH', '');
+            return rCode === code;
+        });
+        
+        if (!exists) {
+            excelData.push({
+                '行业': industry,
+                '排名': '持仓',
+                '股票代码': stockCode,
+                '股票名称': stockName,
+                '市值 (亿)': Math.round(holdingStock.marketCap).toFixed(0),
+                'PE': holdingStock.pe && !isNaN(holdingStock.pe) ? parseFloat(holdingStock.pe).toFixed(2) : 'N/A',
+                'PB': holdingStock.pb && !isNaN(holdingStock.pb) ? parseFloat(holdingStock.pb).toFixed(2) : 'N/A',
+                '收盘价': holdingStock.latestClose.toFixed(2),
+                '涨幅%': holdingStock.pct_chg.toFixed(2),
+                'MA5': holdingStock.ma5.toFixed(2),
+                'MA10': holdingStock.ma10.toFixed(2),
+                'MA 差%': holdingStock.maDiff.toFixed(2),
+                'RSI6': holdingStock.rsi6.toFixed(1),
+                '量比': holdingStock.volumeRatio.toFixed(2),
+                '日线金叉': holdingStock.rule1 ? '✓' : '✗',
+                '当日收红': holdingStock.rule2 ? '✓' : '✗',
+                'RSI<70': holdingStock.rule3 ? '✓' : '✗',
+                '量比>1': holdingStock.rule4 ? '✓' : '✗',
+                '涨幅<5%': holdingStock.rule5 ? '✓' : '✗',
+                '14 日>-7%': holdingStock.rule6 ? '✓' : '✗',
+                '20 日>-10%': holdingStock.rule7 ? '✓' : '✗',
+                'MA20 向上': holdingStock.rule8 ? '✓' : '✗',
+                '周线金叉': holdingStock.rule9 ? '✓' : '✗',
+                '3 月>3%': holdingStock.rule10 ? '✓' : '✗',
+                '得分': holdingStock.score,
+                '必须条件': holdingStock.mustPass ? '是' : '否'
+            });
+            addedHoldings.push(`${stockCode} ${stockName}（得分：${holdingStock.score}）`);
+            console.log(`   ✅ 添加：${stockCode} ${stockName}（得分：${holdingStock.score}）`);
+        } else {
+            console.log(`   ⏭️ 已存在：${stockCode} ${stockName}（已在行业 Top20 中）`);
+        }
+    } else {
+        console.log(`   ❌ 未找到：${code}`);
+    }
+});
+
+if (addedHoldings.length > 0) {
+    console.log(`\n✅ 共添加 ${addedHoldings.length} 只持仓股票到 Excel\n`);
+}
+
 // 创建 workbook
 const wb = utils.book_new();
 const ws = utils.json_to_sheet(excelData);
@@ -290,19 +373,29 @@ ws['!cols'] = [
     { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }
 ];
 
-utils.book_append_sheet(wb, ws, '行业 Top5');
+utils.book_append_sheet(wb, ws, '行业 Top20');
 
-// 保存
-writeFileXLSX(wb, OUTPUT_FILE);
-console.log(`📁 Excel 已保存到：${OUTPUT_FILE}\n`);
+// 保存到临时文件
+writeFileXLSX(wb, OUTPUT_FILE_TEMP);
+
+// 删除旧文件并重命名
+try {
+    if (fs.existsSync(OUTPUT_FILE)) {
+        fs.unlinkSync(OUTPUT_FILE);
+    }
+    fs.renameSync(OUTPUT_FILE_TEMP, OUTPUT_FILE);
+    console.log(`📁 Excel 已保存到：${OUTPUT_FILE}\n`);
+} catch (e) {
+    console.log(`⚠️ 文件替换失败，使用临时文件：${OUTPUT_FILE_TEMP}\n`);
+}
 
 // ========== 显示统计 ==========
 console.log('========================================');
 console.log('  📊 统计结果');
 console.log('========================================\n');
 
-console.log('行业分布 (按满足条件股票数):\n');
-Object.entries(industryTop5)
+console.log('行业分布 (按入选股票数):\n');
+Object.entries(industryTop20)
     .map(([ind, stocks]) => [ind, stocks.length])
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15)
@@ -310,12 +403,12 @@ Object.entries(industryTop5)
         console.log(`   ${ind.padEnd(12)} ${count}只`);
     });
 
-const avgScore = mean(allStocksData.filter(s => s.mustPass).map(s => s.score));
-console.log(`\n📈 平均指标 (满足必须条件的股票):\n`);
+const avgScore = mean(allStocksData.map(s => s.score));
+console.log(`\n📈 平均指标 (所有股票):\n`);
 console.log(`   平均得分：${avgScore.toFixed(2)}`);
-console.log(`   平均 RSI6: ${mean(allStocksData.filter(s => s.mustPass).map(s => s.rsi6)).toFixed(1)}`);
-console.log(`   平均量比：${mean(allStocksData.filter(s => s.mustPass).map(s => s.volumeRatio)).toFixed(2)}`);
-console.log(`   平均涨幅：${mean(allStocksData.filter(s => s.mustPass).map(s => s.pct_chg)).toFixed(2)}%`);
+console.log(`   平均 RSI6: ${mean(allStocksData.map(s => s.rsi6)).toFixed(1)}`);
+console.log(`   平均量比：${mean(allStocksData.map(s => s.volumeRatio)).toFixed(2)}`);
+console.log(`   平均涨幅：${mean(allStocksData.map(s => s.pct_chg)).toFixed(2)}%`);
 
 console.log('\n========================================');
 console.log('  ✅ 分析完成！');

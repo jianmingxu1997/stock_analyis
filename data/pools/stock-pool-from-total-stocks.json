@@ -10,8 +10,8 @@
   },
   "stats": {
     "initial": 5384,
-    "final": 1383,
-    "excluded": 4001
+    "final": 1382,
+    "excluded": 4002
   },
   "excludedReasons": {
     "ST": 129,
@@ -1484,17 +1484,6 @@
       "pe": "13.0",
       "pb": "1.42",
       "listDate": "20030822"
-    },
-    {
-      "tsCode": "601989.SH",
-      "name": "中国重工",
-      "industry": "船舶",
-      "price": 5.1,
-      "totalShare": 228.02,
-      "marketCap": 1162.902,
-      "pe": "77.68",
-      "pb": "1.15",
-      "listDate": "20091216"
     },
     {
       "tsCode": "600875.SH",
