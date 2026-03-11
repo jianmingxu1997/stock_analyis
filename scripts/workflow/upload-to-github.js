@@ -1,0 +1,303 @@
+/**
+ * ========================================
+ * GitHub 文件上传脚本
+ * ========================================
+ * 
+ * 使用 GitHub API 上传股票分析文件
+ * 
+ * 配置：
+ * - Owner: jianmingxu1997
+ * - Repo: stock_analyis
+ * - Token: ghp_***
+ */
+
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
+
+// ========================================
+// 📋 配置
+// ========================================
+
+const GITHUB_CONFIG = {
+    owner: 'jianmingxu1997',
+    repo: 'stock_analyis',
+    token: process.env.GITHUB_TOKEN || '',
+    branch: 'main'  // 或 'master'
+};
+
+const PROJECT_ROOT = path.join(__dirname, '..', '..');
+
+// 获取交易日期（工作日用今天，周末用周五）
+function getTradeDate() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+        // 周末，用周五
+        today.setDate(today.getDate() - (dayOfWeek === 0 ? 2 : 1));
+    }
+    
+    return today.toISOString().split('T')[0].replace(/-/g, '');
+}
+
+const TRADE_DATE = getTradeDate();
+// 尝试使用今天的文件，如果不存在则用昨天的
+const todayExcel = path.join(PROJECT_ROOT, 'output', 'excel', `${TRADE_DATE}_小斐选股_行业 top20.xlsx`);
+const yesterday = new Date();
+yesterday.setDate(yesterday.getDate() - 1);
+const yesterdayDate = yesterday.toISOString().split('T')[0].replace(/-/g, '');
+const yesterdayExcel = path.join(PROJECT_ROOT, 'output', 'excel', `${yesterdayDate}_小斐选股_行业 top20.xlsx`);
+const OUTPUT_EXCEL = fs.existsSync(todayExcel) ? todayExcel : yesterdayExcel;
+const OUTPUT_HTML = path.join(PROJECT_ROOT, 'output', 'dashboard', '小斐智能选股 1.0.html');
+
+// 从 Excel 文件名中提取交易日期（用于 GitHub 文件夹）
+const excelFileName = path.basename(OUTPUT_EXCEL);
+const GITHUB_DATE = excelFileName.split('_')[0];  // 例如：20260309
+
+// ========================================
+// 🔧 工具函数
+// ========================================
+
+/**
+ * 上传文件到 GitHub
+ */
+async function uploadToGitHub(filePath, message) {
+    const fileName = path.basename(filePath);
+    const content = fs.readFileSync(filePath);
+    const contentBase64 = content.toString('base64');
+    
+    const uploadPath = `daily/${GITHUB_DATE}/${fileName}`;
+    
+    console.log(`📤 上传：${uploadPath}`);
+    
+    try {
+        // 先检查文件是否存在
+        let sha = null;
+        try {
+            const checkResponse = await axios.get(
+                `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${uploadPath}`,
+                {
+                    headers: {
+                        'Authorization': `token ${GITHUB_CONFIG.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    timeout: 30000
+                }
+            );
+            sha = checkResponse.data.sha;
+            console.log('   文件已存在，将更新');
+        } catch (e) {
+            // 文件不存在，创建新文件
+            console.log('   创建新文件');
+        }
+        
+        // 上传文件
+        const uploadData = {
+            message: message,
+            content: contentBase64,
+            branch: GITHUB_CONFIG.branch
+        };
+        
+        if (sha) {
+            uploadData.sha = sha;
+        }
+        
+        const response = await axios.put(
+            `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${uploadPath}`,
+            uploadData,
+            {
+                headers: {
+                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                timeout: 120000
+            }
+        );
+        
+        if (response.status === 200 || response.status === 201) {
+            const fileUrl = response.data.content.html_url;
+            const rawUrl = response.data.content.download_url;
+            console.log(`✅ 上传成功！`);
+            console.log(`   查看：${fileUrl}`);
+            console.log(`   下载：${rawUrl}`);
+            return {
+                success: true,
+                html_url: fileUrl,
+                download_url: rawUrl,
+                path: uploadPath
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('❌ 上传失败:', error.message);
+        if (error.response?.data) {
+            console.error('   详情:', error.response.data);
+        }
+        return null;
+    }
+}
+
+/**
+ * 更新 README.md
+ */
+async function updateReadme() {
+    const tradeDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const today = new Date().toLocaleString('zh-CN');
+    
+    const readmeContent = `# 📊 小斐股票分析日报
+
+> 自动更新 · 数据驱动 · 智能选股
+
+---
+
+## 📅 最新更新
+
+- **日期**: ${today}
+- **交易日期**: ${tradeDate}
+
+---
+
+## 📁 文件列表
+
+| 文件类型 | 路径 | 说明 |
+|---------|------|------|
+| Excel | \`daily/${tradeDate}/${tradeDate}_小斐选股_行业 top20.xlsx\` | 股票筛选结果 |
+| HTML | \`daily/${tradeDate}/小斐智能选股 1.0.html\` | 交互式仪表盘 |
+
+---
+
+## 🚀 使用说明
+
+1. 下载 Excel 文件查看完整数据
+2. 打开 HTML 文件查看交互式图表
+3. 每日 16:00 自动更新
+
+---
+
+*Generated by 小斐股票分析系统*
+`;
+    
+    console.log('\n📝 更新 README.md...');
+    
+    try {
+        // 检查 README 是否存在
+        let sha = null;
+        try {
+            const checkResponse = await axios.get(
+                `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/README.md`,
+                {
+                    headers: {
+                        'Authorization': `token ${GITHUB_CONFIG.token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    timeout: 30000
+                }
+            );
+            sha = checkResponse.data.sha;
+        } catch (e) {
+            // 不存在
+        }
+        
+        const uploadData = {
+            message: 'Update README.md',
+            content: Buffer.from(readmeContent).toString('base64'),
+            branch: GITHUB_CONFIG.branch
+        };
+        
+        if (sha) {
+            uploadData.sha = sha;
+        }
+        
+        await axios.put(
+            `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/README.md`,
+            uploadData,
+            {
+                headers: {
+                    'Authorization': `token ${GITHUB_CONFIG.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                timeout: 30000
+            }
+        );
+        
+        console.log('✅ README.md 已更新');
+        return true;
+    } catch (error) {
+        console.error('❌ README 更新失败:', error.message);
+        return false;
+    }
+}
+
+// ========================================
+// 🚀 主函数
+// ========================================
+
+async function main() {
+    console.log('========================================');
+    console.log('  GitHub 文件上传');
+    console.log('========================================\n');
+    
+    console.log(`📋 仓库：${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}`);
+    console.log(`🌿 分支：${GITHUB_CONFIG.branch}\n`);
+    
+    // 检查文件
+    if (!fs.existsSync(OUTPUT_EXCEL)) {
+        console.error(`❌ Excel 文件不存在：${OUTPUT_EXCEL}`);
+        return;
+    }
+    if (!fs.existsSync(OUTPUT_HTML)) {
+        console.error(`❌ HTML 文件不存在：${OUTPUT_HTML}`);
+        return;
+    }
+    
+    // 上传 Excel
+    console.log('📤 开始上传 Excel...\n');
+    const excelResult = await uploadToGitHub(
+        OUTPUT_EXCEL,
+        'Add stock analysis Excel'
+    );
+    
+    // 上传 HTML
+    console.log('\n📤 开始上传 HTML...\n');
+    const htmlResult = await uploadToGitHub(
+        OUTPUT_HTML,
+        'Add stock analysis dashboard'
+    );
+    
+    // 更新 README
+    await updateReadme();
+    
+    // 总结
+    console.log('\n========================================');
+    console.log('  上传完成！');
+    console.log('========================================\n');
+    
+    if (excelResult) {
+        console.log('📊 Excel:');
+        console.log(`   ${excelResult.html_url}\n`);
+    }
+    if (htmlResult) {
+        console.log('🌐 HTML:');
+        console.log(`   ${htmlResult.html_url}\n`);
+    }
+    
+    // 保存结果供通知脚本使用
+    const resultFile = path.join(PROJECT_ROOT, 'config', '.github-upload-result.json');
+    fs.writeFileSync(resultFile, JSON.stringify({
+        success: true,
+        timestamp: new Date().toISOString(),
+        excel: excelResult,
+        html: htmlResult,
+        repo: `https://github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}`
+    }, null, 2), 'utf8');
+    console.log(`📝 结果已保存：${resultFile}`);
+}
+
+// 运行
+main().catch(console.error);
+
+// 导出
+module.exports = { uploadToGitHub };
